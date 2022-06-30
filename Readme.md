@@ -6,7 +6,7 @@ Ansible Script to launch your own Minecraft Server for your friends.
 # Automation Script for Minecraft Servers - Vanilla Linux Script for AlmaLinux
 
 This project is ongoing and will continue to be updated over time.
-- Server Version 1.14
+- **Server Version 1.18.2**
 
 # Generating a Hashed Password For This Script:
 ```
