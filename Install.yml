@@ -1,0 +1,157 @@
+###############################
+# PDS-LLC Minecraft Installer #
+###############################
+---
+- name: Minecraft Server Installer Script
+  hosts: localhost
+  become: yes
+  become_user: root
+  gather_facts: yes
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    users:
+    - username: mcserver
+      password: <Hash Password Here>
+  vars_prompt:
+    - name: ansible_password
+      prompt: Enter password
+      unsafe: yes
+      private: yes
+  tasks:
+  - name: Update Linux with Latest Packages
+    become: true
+    dnf:
+      name: '*'
+      state: latest
+
+  - name: install Jave 17
+    become: yes
+    become_user: root
+    yum:
+      name: "{{ item }}"
+      state: present
+      update_cache: true
+    loop:
+      - java-17-openjdk
+
+  - name: Create User mcserver with Home Directory
+    become: yes
+    become_user: root
+    user: 
+      name: "{{ item.username }}"
+      shell: /bin/bash
+      createhome: yes
+      group: wheel
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      password: "{{ item.password }}"
+      update_password: always
+    with_items: "{{ users }}"
+
+  - name: Installing Screen
+    become: yes
+    become_user: root
+    yum:
+      name: screen
+      state: present
+
+  - name: Opening Firewall Ports for Minecraft 
+    become: true
+    become_user: root
+    firewalld:
+      state: enabled
+      zone: public
+      port: "{{ item }}"
+      permanent: true
+    loop:
+      - '25565/tcp'
+
+  - name: Reload Firewall Rules
+    systemd:
+      name: firewalld
+      state: reloaded
+
+  - name: Create BuildTools Directory
+    become: true
+    file:
+      path: /home/mcserver/Desktop/buildtools
+      state: directory
+      mode: '0777'
+
+  - name: Create Spigot Minecraft Directory
+    become: yes
+    become_user: root
+    file:
+      path: /home/mcserver/spigot
+      state: directory
+      mode: '0777'
+
+  - name: Change perms for folder
+    become: yes
+    become_user: root
+    command: chmod 777 -R /home/mcserver/spigot
+
+  - name: Download Latest Minecraft Server Jar
+    become: yes
+    become_user: root
+    get_url:
+      url: "https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar"
+      dest: /home/mcserver/Desktop/buildtools
+      mode: '0440'
+
+  - name: Make BuildTools.jar executable
+    become: true
+    become_user: root
+    command: chmod +x /home/mcserver/Desktop/buildtools/BuildTools.jar
+
+  - name: Start BuildTools Installer
+    become: true
+    become_user: root
+    command: java -jar BuildTools.jar
+    args:
+      chdir: /home/mcserver/Desktop/buildtools
+
+  - name: Move Spigot.jar to Spigot Home
+    command: mv /home/mcserver/Desktop/buildtools/spigot-1.18.2.jar /home/mcserver/spigot/spigot.jar
+
+  - name: Changing perm of jar file, adding "+x"
+    become: yes
+    become_user: root
+    file: dest=/home/mcserver/spigot/spigot.jar mode=+x
+
+  - name: Creating MC Launcher Bash Script
+    copy:
+      dest: /home/mcserver/spigot/launch.sh
+      content: |
+        #!/bin/sh
+        screen -dms spigot java -Xmx6G -Xms6G -jar spigot.jar nogui
+
+  - name: Trigger EULA
+    become: yes
+    become_user: root
+    shell: ./launch.sh >> log.txt
+    args:
+      chdir: /home/mcserver/spigot/
+
+  - name: Change EULA to True
+    copy:
+      dest: /home/mcserver/spigot/eula.txt
+      content: |
+        eula=true
+
+  - name: "Verify EULA is True"
+    shell: |
+      cat /home/mcserver/spigot/eula.txt
+    register: file_content
+
+  - name: "Print EULA to Console"
+    debug:
+      msg: "{{ file_content.stdout }}"
+
+  - name: Start Minecraft
+    become: yes
+    become_user: mcserver
+    shell: ./launch.sh >> start.txt
+    args:
+      chdir: /home/mcserver/spigot/
+
