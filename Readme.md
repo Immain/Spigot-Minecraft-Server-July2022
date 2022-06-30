@@ -1,6 +1,6 @@
 # Spigot-Minecraft-Server-July2022 (JAVA Edition)
 Ansible Script to launch your own Minecraft Server for your friends.
-<img src=https://meshpie.com/wp-content/uploads/2020/04/spigot-300x300.png>
+<img src=https://miro.medium.com/max/685/1*inGbpF3IFv_fUC8mbO9_uw.png>
 <img src=https://www.letstechup.com/wp-content/uploads/2021/10/Minecraft-founder.jpg>
 
 # Automation Script for Minecraft Servers - Vanilla Linux Script for AlmaLinux
